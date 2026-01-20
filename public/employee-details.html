@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Details - Employee Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+        .blink-emergency {
+            animation: blink 2s ease-in-out infinite;
+        }
+        .info-grid { display: grid; gap: 1rem; }
+        .info-row { display: flex; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+        .info-label { color: #6b7280; min-width: 140px; font-size: 0.875rem; }
+        .info-value { font-weight: 500; flex: 1; }
+        @media (max-width: 640px) {
+            .info-row { flex-direction: column; gap: 0.25rem; }
+            .info-label { min-width: auto; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-3 py-2 md:px-4 md:py-3">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                <div class="flex items-center justify-between">
+                    <button onclick="window.history.back()" class="flex items-center hover:bg-blue-700 px-2 py-1 rounded text-sm">
+                        <i class="fas fa-arrow-left mr-1"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-lg font-bold md:hidden">Employee</span>
+                    <span id="emergencyInfoMobile" class="text-xs bg-red-600 px-2 py-1 rounded blink-emergency hidden md:hidden" title="Emergency Contact">
+                        <span id="emergencyContactPersonMobile" class="text-white font-bold"></span>: <a id="emergencyPhoneMobile" href="#" class="text-white"><i class="fas fa-phone-alt"></i></a>
+                    </span>
+                </div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <span class="text-xl font-bold">Employee Details</span>
+                    <span id="emergencyInfo" class="text-sm bg-red-600 px-3 py-1 rounded-lg font-semibold blink-emergency hidden">
+                        Emergency: <span id="emergencyContactPerson" class="text-white font-bold"></span> - <a id="emergencyPhone" href="#" class="text-white hover:underline"></a>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="downloadEmployeeProfile()" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-pdf md:mr-1"></i><span class="hidden md:inline">Download</span>
+                    </button>
+                    <button onclick="editEmployee()" class="bg-white text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-50 text-sm">
+                        <i class="fas fa-edit md:mr-1"></i><span class="hidden md:inline">Edit</span>
+                    </button>
+                    <button id="deleteEmployeeBtn" onclick="openTerminateModal()" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 hidden text-sm">
+                        <i class="fas fa-user-times md:mr-1"></i><span class="hidden md:inline">Terminate</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6">
+        <div id="loadingIndicator" class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i>
+            <p class="mt-4 text-gray-600">Loading employee details...</p>
+        </div>
+
+        <div id="employeeDetails" class="hidden">
+            <!-- Profile Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-8 text-white mb-6">
+                <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                    <div class="w-32 h-32 rounded-full border-4 border-white overflow-hidden bg-white">
+                        <img id="profilePhoto" src="" alt="Profile" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <h1 id="employeeName" class="text-3xl font-bold mb-2"></h1>
+                        <p id="designation" class="text-xl mb-2"></p>
+                        <div class="flex flex-wrap justify-center md:justify-start gap-3 text-sm">
+                            <span id="employeeId" class="bg-white bg-opacity-20 px-3 py-1 rounded"></span>
+                            <span id="department" class="bg-white bg-opacity-20 px-3 py-1 rounded"></span>
+                            <span id="status" class="px-3 py-1 rounded"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Personal Information -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user text-blue-600 mr-2"></i>Personal Information
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Date of Birth:</span>
+                            <span id="dob" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Gender:</span>
+                            <span id="gender" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Blood Group:</span>
+                            <span id="bloodGroup" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Marital Status:</span>
+                            <span id="maritalStatus" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Father/Guardian:</span>
+                            <span id="fatherName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Mother Name:</span>
+                            <span id="motherName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Spouse Name:</span>
+                            <span id="spouseName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Number of Children:</span>
+                            <span id="numberOfChildren" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Children Names:</span>
+                            <span id="childrenNames" class="info-value"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-phone text-blue-600 mr-2"></i>Contact Information
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Mobile:</span>
+                            <span id="mobile" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span id="email" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Nationality:</span>
+                            <span id="nationality" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Temporary Address:</span>
+                            <span id="tempAddress" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Permanent Address:</span>
+                            <span id="permAddress" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Emergency Contact:</span>
+                            <span id="emergencyContact" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Emergency Contact Person:</span>
+                            <span id="emergencyContactName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Emergency Relation:</span>
+                            <span id="emergencyContactRelation" class="info-value"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical & Identity -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-id-card text-blue-600 mr-2"></i>Medical & Identity
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Aadhaar Number:</span>
+                            <span id="aadhaarNumber" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Aadhaar Document:</span>
+                            <span id="aadhaarDoc">
+                                <a id="aadhaarDocLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">
+                                    <i class="fas fa-file-pdf mr-1"></i>View Document
+                                </a>
+                                <span id="aadhaarDocNone" class="text-gray-500 italic">Not uploaded</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Driving License:</span>
+                            <span id="drivingLicense" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">License Document:</span>
+                            <span id="licenseDoc">
+                                <a id="licenseDocLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">
+                                    <i class="fas fa-file-pdf mr-1"></i>View Document
+                                </a>
+                                <span id="licenseDocNone" class="text-gray-500 italic">Not uploaded</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Medical Details:</span>
+                            <span id="medicalDetails" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Digital Signature:</span>
+                            <span id="signatureDoc">
+                                <img id="signatureImage" src="" alt="Digital Signature" class="max-w-xs max-h-20 border border-gray-300 rounded hidden">
+                                <span id="signatureDocNone" class="text-gray-500 italic">Not provided</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employment Details -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-briefcase text-blue-600 mr-2"></i>Employment Details
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Company:</span>
+                            <span id="company" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Date of Joining:</span>
+                            <span id="dateOfJoining" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Year of Joining:</span>
+                            <span id="yearOfJoining" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Education Qualification:</span>
+                            <span id="educationQualification" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Education Document:</span>
+                            <span id="educationDoc">
+                                <a id="educationDocLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">
+                                    <i class="fas fa-file-pdf mr-1"></i>View Document
+                                </a>
+                                <span id="educationDocNone" class="text-gray-500 italic">Not uploaded</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Employment Document:</span>
+                            <span id="employmentDoc">
+                                <a id="employmentDocLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">
+                                    <i class="fas fa-file-pdf mr-1"></i>View Document
+                                </a>
+                                <span id="employmentDocNone" class="text-gray-500 italic">Not uploaded</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Past Work Profile:</span>
+                            <span id="pastWorkProfile" class="info-value"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Salary & Allowances -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-rupee-sign text-blue-600 mr-2"></i>Salary & Allowances
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Basic Salary:</span>
+                            <span id="basicSalary" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Home Allowance:</span>
+                            <span id="homeAllowance" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Food Allowance:</span>
+                            <span id="foodAllowance" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Gross Salary:</span>
+                            <span id="grossSalary" class="info-value font-bold text-green-600"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank Details -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-university text-blue-600 mr-2"></i>Bank Details
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Account Holder Name:</span>
+                            <span id="accountHolderName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Account Number:</span>
+                            <span id="bankAccount" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">IFSC Code:</span>
+                            <span id="bankIfsc" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Bank Name:</span>
+                            <span id="bankName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Passbook:</span>
+                            <span id="bankDoc">
+                                <a id="bankDocLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">
+                                    <i class="fas fa-file-pdf mr-1"></i>View Document
+                                </a>
+                                <span id="bankDocNone" class="text-gray-500 italic">Not uploaded</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reporting Person -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user-tie text-blue-600 mr-2"></i>Reporting Person
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Name:</span>
+                            <span id="reportingPersonName" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Role:</span>
+                            <span id="reportingPersonRole" class="info-value"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training & Development -->
+                <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-graduation-cap text-blue-600 mr-2"></i>Training & Development
+                        </h2>
+                        <button onclick="openAddTrainingModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            <i class="fas fa-plus mr-2"></i>Add Training
+                        </button>
+                    </div>
+                    <div id="trainingRecords" class="space-y-3">
+                        <p class="text-gray-500">No training records available</p>
+                    </div>
+                </div>
+
+                <!-- Performance Records -->
+                <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-award text-blue-600 mr-2"></i>Performance Records
+                        </h2>
+                        <button onclick="openAddPerformanceModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>Add Achievement
+                        </button>
+                    </div>
+                    <div id="performanceRecords" class="space-y-3">
+                        <p class="text-gray-500">No performance records available</p>
+                    </div>
+                </div>
+
+                <!-- Leave Records -->
+                <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-calendar-times text-blue-600 mr-2"></i>Leave Records
+                        </h2>
+                        <button onclick="openAddLeaveModal()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+                            <i class="fas fa-plus mr-2"></i>Add Leave
+                        </button>
+                    </div>
+                    <div id="leaveRecords" class="space-y-3">
+                        <p class="text-gray-500">No leave records available</p>
+                    </div>
+                </div>
+
+                <!-- Salary Increment Records -->
+                <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-rupee-sign text-green-600 mr-2"></i>Salary Increment Records
+                        </h2>
+                        <button onclick="openAddIncrementModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>Add Increment
+                        </button>
+                    </div>
+                    <div id="salaryIncrementRecords" class="space-y-3">
+                        <p class="text-gray-500">No salary increment records available</p>
+                    </div>
+                </div>
+
+                <!-- Termination/Deactivation Details (if applicable) -->
+                <div id="terminationSection" class="bg-red-50 rounded-lg shadow p-6 lg:col-span-2 hidden">
+                    <h2 class="text-xl font-bold text-red-800 mb-4 flex items-center">
+                        <i class="fas fa-user-times text-red-600 mr-2"></i>Termination/Deactivation Details
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Last Day of Work:</span>
+                            <span id="lastDayOfWork" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Reason:</span>
+                            <span id="leavingReason" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Final Payment:</span>
+                            <span id="finalPayment" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Other Details:</span>
+                            <span id="leavingOtherDetails" class="info-value"></span>
+                        </div>
+                        <div id="leavingDoc" class="hidden info-row">
+                            <span class="info-label">Attachment:</span>
+                            <a id="leavingDocLink" href="#" target="_blank" class="text-blue-600 hover:underline">
+                                <i class="fas fa-file-pdf mr-1"></i>View Document
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Training Modal -->
+    <div id="trainingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Add Training Record</h3>
+            <form id="trainingForm" onsubmit="saveTraining(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">From Date</label>
+                    <input type="date" name="from_date" required class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">To Date</label>
+                    <input type="date" name="to_date" required class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Place</label>
+                    <input type="text" name="place" required class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Supporting Document</label>
+                    <input type="file" name="training_document" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                    <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, JPG, PNG</p>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeTrainingModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Performance Modal -->
+    <div id="performanceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Add Performance Record</h3>
+            <form id="performanceForm" onsubmit="savePerformance(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Date</label>
+                    <input type="date" name="date" required class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Achievement</label>
+                    <input type="text" name="achievement" required class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Reward</label>
+                    <input type="text" name="reward" class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Description</label>
+                    <textarea name="description" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Supporting Document</label>
+                    <input type="file" name="performance_document" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                    <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, JPG, PNG</p>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closePerformanceModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Leave Modal -->
+    <div id="leaveModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Add Leave Record</h3>
+            <form id="leaveForm">
+                <div class="mb-4">
+                    <label for="leaveType" class="block text-sm font-medium mb-1">Leave Type</label>
+                    <select id="leaveType" name="leave_type" required class="w-full border rounded px-3 py-2">
+                        <option value="Sick Leave">Sick Leave</option>
+                        <option value="Casual Leave">Casual Leave</option>
+                        <option value="Earned Leave">Earned Leave</option>
+                        <option value="Maternity Leave">Maternity Leave</option>
+                        <option value="Paternity Leave">Paternity Leave</option>
+                        <option value="Unpaid Leave">Unpaid Leave</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="fromDate" class="block text-sm font-medium mb-1">From Date</label>
+                        <input type="date" id="fromDate" name="from_date" required class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label for="toDate" class="block text-sm font-medium mb-1">To Date</label>
+                        <input type="date" id="toDate" name="to_date" required class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="reason" class="block text-sm font-medium mb-1">Reason</label>
+                    <textarea id="reason" name="reason" rows="3" required class="w-full border rounded px-3 py-2"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="remarks" class="block text-sm font-medium mb-1">Remarks (Optional)</label>
+                    <textarea id="remarks" name="remarks" rows="2" class="w-full border rounded px-3 py-2"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelLeaveBtn" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Salary Increment Modal -->
+    <div id="incrementModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Add Salary Increment</h3>
+            <form id="incrementForm">
+                <div class="mb-4">
+                    <label for="incrementDate" class="block text-sm font-medium mb-1">Date *</label>
+                    <input type="date" id="incrementDate" name="date" required class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label for="incrementAmount" class="block text-sm font-medium mb-1">Increased Amount (₹) *</label>
+                    <input type="number" id="incrementAmount" name="increased_amount" step="0.01" min="0" required class="w-full border rounded px-3 py-2" placeholder="Enter amount">
+                </div>
+                <div class="mb-4">
+                    <label for="incrementDescription" class="block text-sm font-medium mb-1">Description *</label>
+                    <textarea id="incrementDescription" name="description" rows="3" required class="w-full border rounded px-3 py-2" placeholder="Reason for increment"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeIncrementModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save Increment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Terminate Employee Modal -->
+    <div id="terminateModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-t-lg">
+                <h2 class="text-2xl font-bold">Terminate Employee</h2>
+                <p class="text-sm text-red-100 mt-1">This will mark the employee as terminated and store the record</p>
+            </div>
+            
+            <form id="terminateForm" class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Last Working Day *</label>
+                    <input type="date" name="last_day_of_work" required class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-red-500">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Reason for Leaving *</label>
+                    <select name="leaving_reason" required class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-red-500">
+                        <option value="">Select Reason</option>
+                        <option value="Resignation">Resignation</option>
+                        <option value="Termination">Termination</option>
+                        <option value="Retirement">Retirement</option>
+                        <option value="Contract End">Contract End</option>
+                        <option value="Absconding">Absconding</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Final Payment (if applicable)</label>
+                    <input type="number" name="final_payment" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-red-500" placeholder="Enter final settlement amount">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Details/Remarks</label>
+                    <textarea name="leaving_other_details" rows="4" class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-red-500" placeholder="Any additional information..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Supporting Document</label>
+                    <input type="file" name="leaving_attachment" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <small class="text-gray-500">Resignation letter, termination letter, etc.</small>
+                </div>
+                
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <div class="flex">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 mr-3 mt-1"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-yellow-800">Important Note:</p>
+                            <p class="text-sm text-yellow-700">This will mark the employee as "Terminated" and the record will be preserved for audit purposes. This action cannot be undone.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeTerminateModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" id="terminateBtn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-user-times mr-2"></i>Terminate Employee
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/employee-details.js"></script>
+</body>
+</html>

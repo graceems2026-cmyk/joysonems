@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee View - Employee Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .employee-card { transition: all 0.3s ease; }
+        .employee-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-3 py-2 md:px-4 md:py-3">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-users text-xl md:text-2xl"></i>
+                    <span class="text-lg md:text-xl font-bold">Employees</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="relative">
+                        <button id="exportBtn" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 flex items-center text-sm">
+                            <i class="fas fa-file-export"></i>
+                            <span class="hidden md:inline ml-2">Export</span>
+                            <i class="fas fa-chevron-down ml-1"></i>
+                        </button>
+                        <div id="exportMenu" class="hidden absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg z-10 border">
+                            <button onclick="openExportModal('excel')" class="w-full text-left px-3 py-2 text-black hover:bg-gray-100 flex items-center text-sm">
+                                <i class="fas fa-file-excel text-green-600 mr-2"></i> Excel
+                            </button>
+                            <button onclick="openExportModal('pdf')" class="w-full text-left px-3 py-2 text-black hover:bg-gray-100 flex items-center text-sm">
+                                <i class="fas fa-file-pdf text-red-600 mr-2"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="openAddEmployeeModal()" class="bg-white text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-50 flex items-center text-sm">
+                        <i class="fas fa-user-plus"></i>
+                        <span class="hidden md:inline ml-2">Add</span>
+                    </button>
+                    <button onclick="goToDashboard()" class="bg-blue-700 px-3 py-2 rounded-lg hover:bg-blue-800 text-sm">
+                        <i class="fas fa-arrow-left"></i>
+                        <span class="hidden md:inline ml-2">Dashboard</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search and Filter Bar -->
+    <div class="container mx-auto px-4 py-6">
+        <!-- Company Filter Info -->
+        <div id="companyFilterInfo" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Viewing employees for:</strong> <span id="filterCompanyDisplay"></span>
+                        <br><strong>Employees shown:</strong> <span id="filterEmployeeCount"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="searchInput" placeholder="Search employees..." 
+                    class="border rounded px-4 py-2">
+                <select id="companyFilter" class="border rounded px-4 py-2">
+                    <option value="">All Companies</option>
+                </select>
+                <select id="departmentFilter" class="border rounded px-4 py-2">
+                    <option value="">All Departments</option>
+                </select>
+                <select id="statusFilter" class="border rounded px-4 py-2">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Terminated" id="terminatedOption">Terminated</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Employee Cards Grid -->
+        <div id="employeeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- Terminated Employees Section (Super Admin Only) -->
+        <div id="terminatedSection" class="hidden">
+            <div class="mt-12 mb-6 border-t-2 border-gray-300 pt-6">
+                <h2 class="text-2xl font-bold text-red-600 mb-2 flex items-center">
+                    <i class="fas fa-user-times mr-2"></i>
+                    Terminated Employees
+                </h2>
+                <p class="text-gray-600 text-sm mb-6">These employees have been terminated. You can reactivate them by clicking the "Reactivate Employee" button.</p>
+                <div id="terminatedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="text-center py-12 hidden">
+            <i class="fas fa-users-slash text-6xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">No employees found</p>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Export Field Selection Modal -->
+    <div id="exportModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-t-lg sticky top-0">
+                <h2 class="text-2xl font-bold">
+                    <i class="fas fa-file-export mr-2"></i>
+                    <span id="exportModalTitle">Export Employees</span>
+                </h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4">
+                    <p class="text-sm text-blue-700">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Select the fields you want to include in the export. Essential fields are pre-selected.
+                    </p>
+                </div>
+
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-lg">Select Fields to Export</h3>
+                        <div class="space-x-2">
+                            <button onclick="selectAllFields()" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                                <i class="fas fa-check-square mr-1"></i>Select All
+                            </button>
+                            <button onclick="deselectAllFields()" class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">
+                                <i class="fas fa-square mr-1"></i>Deselect All
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Basic Information (Pre-selected) -->
+                        <div class="col-span-3">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2 bg-gray-100 p-2 rounded">Basic Information</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="employee_id" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Employee ID</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="first_name" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">First Name</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="last_name" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Last Name</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="gender" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Gender</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="date_of_birth" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Date of Birth</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="blood_group" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Blood Group</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-span-3">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2 bg-gray-100 p-2 rounded">Contact Information</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="mobile" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Mobile</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="email" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Email</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="temp_address" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Temporary Address</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="perm_address" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Permanent Address</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="emergency_contact_phone" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Emergency Contact</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Employment Details (Pre-selected) -->
+                        <div class="col-span-3">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2 bg-gray-100 p-2 rounded">Employment Details</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="company_name" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Company</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="designation" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Designation</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="department" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Department</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="date_of_joining" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Date of Joining</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="status" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Status</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="education_qualification" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Education</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Salary Information -->
+                        <div class="col-span-3">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2 bg-gray-100 p-2 rounded">Salary Information</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="gross_salary" checked class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Gross Salary</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="basic_salary" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Basic Salary</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="home_allowance" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Home Allowance</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="food_allowance" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Food Allowance</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="transport_allowance" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Transport Allowance</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="medical_allowance" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Medical Allowance</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="special_allowance" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Special Allowance</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Family Information -->
+                        <div class="col-span-3">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2 bg-gray-100 p-2 rounded">Family Information</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="father_or_guardian" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Father/Guardian</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="mother_name" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Mother Name</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="marital_status" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Marital Status</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="spouse_name" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Spouse Name</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Bank Details -->
+                        <div class="col-span-3">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2 bg-gray-100 p-2 rounded">Bank Details</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="bank_name" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Bank Name</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="bank_ifsc" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">IFSC Code</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="account_holder_name" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Account Holder Name</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" name="exportField" value="bank_account" class="form-checkbox text-blue-600">
+                                    <span class="text-sm">Bank Account Number</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button onclick="closeExportModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button onclick="performExport()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-download mr-2"></i>
+                        <span id="exportButtonText">Export</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Helper function for employee cards
+        function viewEmployeeDetails(id) {
+            window.location.href = `/employee-details.html?id=${id}`;
+        }
+    </script>
+    
+    <!-- Load external employee view script (handles auth check and all functionality) -->
+    <script src="/js/employee-view.js"></script>
+</body>
+</html>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add/Edit Employee - Employee Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .form-section { border-left: 4px solid #3b82f6; }
+        #videoContainer video { transform: scaleX(-1); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <button onclick="window.history.back()" class="flex items-center space-x-2 hover:bg-blue-700 px-3 py-2 rounded">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back</span>
+            </button>
+            <span id="pageTitle" class="text-xl font-bold">Add Employee</span>
+            <div></div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6">
+        <form id="employeeForm" class="max-w-6xl mx-auto">
+            <!-- Profile Photo Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-camera text-blue-600 mr-3"></i>
+                    Profile Photo
+                </h2>
+                <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+                    <div class="w-40 h-40 rounded-full border-4 border-blue-600 overflow-hidden bg-gray-100 flex items-center justify-center">
+                        <img id="profilePreview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                        <i class="fas fa-user text-6xl text-gray-300" id="defaultIcon"></i>
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <div class="flex flex-wrap gap-3 justify-center md:justify-start mb-4">
+                            <button type="button" onclick="openCamera()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-camera mr-2"></i>Take Photo
+                            </button>
+                            <label class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 cursor-pointer">
+                                <i class="fas fa-upload mr-2"></i>Upload Photo
+                                <input type="file" id="profilePhotoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
+                            </label>
+                            <button type="button" onclick="removePhoto()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                                <i class="fas fa-trash mr-2"></i>Remove
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-500">Recommended: Square image, at least 200x200px</p>
+                    </div>
+                </div>
+
+                <!-- Camera Modal -->
+                <div id="cameraModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+                    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold">Capture Photo</h3>
+                            <button type="button" onclick="closeCamera()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-2xl"></i>
+                            </button>
+                        </div>
+                        <div id="videoContainer" class="mb-4 relative">
+                            <video id="cameraVideo" width="100%" height="400" autoplay class="rounded-lg bg-black"></video>
+                            <button type="button" onclick="switchCamera()" class="absolute top-4 right-4 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-800 p-3 rounded-full shadow-lg transition">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <canvas id="photoCanvas" class="hidden"></canvas>
+                        <div class="flex justify-center space-x-4">
+                            <button type="button" onclick="capturePhoto()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-camera mr-2"></i>Capture
+                            </button>
+                            <button type="button" onclick="closeCamera()" class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Basic Information -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-user text-blue-600 mr-3"></i>
+                    Basic Information
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                        <input type="text" name="first_name" required class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                        <input type="text" name="last_name" required class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                        <input type="date" name="date_of_birth" required class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                        <select name="gender" required class="w-full border rounded px-3 py-2">
+                            <option value="">Select</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
+                        <select name="blood_group" class="w-full border rounded px-3 py-2">
+                            <option value="">Select</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
+                        <select name="marital_status" class="w-full border rounded px-3 py-2">
+                            <option value="">Select</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Divorced">Divorced</option>
+                            <option value="Widowed">Widowed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Father/Guardian Name</label>
+                        <input type="text" name="father_or_guardian" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mother Name</label>
+                        <input type="text" name="mother_name" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Spouse Name</label>
+                        <input type="text" name="spouse_name" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Number of Children</label>
+                        <input type="number" name="number_of_children" min="0" value="0" class="w-full border rounded px-3 py-2" onchange="toggleChildrenNames(this.value)">
+                    </div>
+                    <div class="md:col-span-2" id="childrenNamesContainer" style="display: none;">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Children Names (comma-separated)</label>
+                        <input type="text" name="children_names" placeholder="Enter children names separated by commas" class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical & Identity Information -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-id-card text-blue-600 mr-3"></i>
+                    Medical & Identity Information
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Aadhaar Number</label>
+                        <input type="text" name="aadhaar_number" maxlength="12" pattern="[0-9]{12}" placeholder="12-digit Aadhaar number" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Aadhaar Attachment</label>
+                        <div id="aadhaarDocCurrent" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded flex items-center justify-between">
+                            <a id="aadhaarDocViewLink" href="#" target="_blank" class="text-blue-600 hover:underline">
+                                <i class="fas fa-file-pdf mr-1"></i>View Current Document
+                            </a>
+                            <span class="text-sm text-gray-600">Replace with new file below</span>
+                        </div>
+                        <input type="file" name="aadhaar_attachment" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Driving License Number</label>
+                        <input type="text" name="driving_license" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Driving License Attachment</label>
+                        <div id="drivingLicenseDocCurrent" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded flex items-center justify-between">
+                            <a id="drivingLicenseDocViewLink" href="#" target="_blank" class="text-blue-600 hover:underline">
+                                <i class="fas fa-file-pdf mr-1"></i>View Current Document
+                            </a>
+                            <span class="text-sm text-gray-600">Replace with new file below</span>
+                        </div>
+                        <input type="file" name="driving_license_attachment" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Medical Details (if applicable)</label>
+                        <textarea name="medical_details" rows="3" placeholder="Enter any medical conditions, allergies, or special requirements" class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-phone text-blue-600 mr-3"></i>
+                    Contact Information
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
+                        <input type="tel" name="mobile" required pattern="[0-9]{10}" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                        <input type="email" name="email" required class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Temporary Address</label>
+                        <textarea name="temp_address" id="tempAddress" rows="2" class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Permanent Address</label>
+                        <div class="flex gap-2 mb-2">
+                            <button type="button" onclick="copyTempToPerm()" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm flex items-center gap-1">
+                                <i class="fas fa-copy"></i>Copy from Temporary
+                            </button>
+                        </div>
+                        <textarea name="perm_address" id="permAddress" rows="2" class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
+                        <input type="text" name="emergency_contact_name" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Number</label>
+                        <input type="tel" name="emergency_contact_phone" pattern="[0-9]{10}" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Relation</label>
+                        <select name="emergency_contact_relation" class="w-full border rounded px-3 py-2">
+                            <option value="">Select</option>
+                            <option value="Father">Father</option>
+                            <option value="Mother">Mother</option>
+                            <option value="Spouse">Spouse</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employment Details -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-briefcase text-blue-600 mr-3"></i>
+                    Employment Details
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Company *</label>
+                        <select name="company_id" id="companySelect" required class="w-full border rounded px-3 py-2">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                        <input type="text" name="department" list="departmentList" class="w-full border rounded px-3 py-2">
+                        <datalist id="departmentList">
+                            <option value="Operations">
+                            <option value="Engineering">
+                            <option value="Marketing">
+                            <option value="Sales">
+                            <option value="HR">
+                            <option value="Finance">
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Designation (Role) *</label>
+                        <input type="text" name="designation" required list="designationList" class="w-full border rounded px-3 py-2">
+                        <datalist id="designationList">
+                            <option value="Software Engineer">
+                            <option value="Senior Developer">
+                            <option value="Team Lead">
+                            <option value="Manager">
+                            <option value="HR Executive">
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date of Joining *</label>
+                        <input type="date" name="date_of_joining" required class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Education Qualification</label>
+                        <input type="text" name="education_qualification" placeholder="e.g., B.Tech, MBA" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Education Document</label>
+                        <div id="educationDocCurrent" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded flex items-center justify-between">
+                            <a id="educationDocViewLink" href="#" target="_blank" class="text-blue-600 hover:underline">
+                                <i class="fas fa-file-pdf mr-1"></i>View Current Document
+                            </a>
+                            <span class="text-sm text-gray-600">Replace with new file below</span>
+                        </div>
+                        <input type="file" name="education_document" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Employment Document</label>
+                        <div id="employmentDocCurrent" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded flex items-center justify-between">
+                            <a id="employmentDocViewLink" href="#" target="_blank" class="text-blue-600 hover:underline">
+                                <i class="fas fa-file-pdf mr-1"></i>View Current Document
+                            </a>
+                            <span class="text-sm text-gray-600">Replace with new file below</span>
+                        </div>
+                        <input type="file" name="employment_document" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                        <small class="text-gray-500">Offer letter, appointment letter, etc.</small>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Past Working Profile</label>
+                        <textarea name="past_work_profiles" rows="3" placeholder="Previous company, role, and duration..." class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Salary & Allowances -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-rupee-sign text-blue-600 mr-3"></i>
+                    Salary & Allowances
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Basic Salary *</label>
+                        <input type="number" name="basic_salary" required step="0.01" onchange="calculateGross()" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Home Allowance</label>
+                        <input type="number" name="home_allowance" step="0.01" value="0" onchange="calculateGross()" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Food Allowance</label>
+                        <input type="number" name="food_allowance" step="0.01" value="0" onchange="calculateGross()" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Gross Salary</label>
+                        <input type="number" name="gross_salary" step="0.01" readonly class="w-full border rounded px-3 py-2 bg-gray-100">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Details -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-university text-blue-600 mr-3"></i>
+                    Bank Details
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
+                        <input type="text" name="account_holder_name" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                        <input type="text" name="bank_account" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                        <input type="text" name="bank_ifsc" pattern="[A-Z]{4}0[A-Z0-9]{6}" placeholder="e.g., SBIN0001234" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                        <input type="text" name="bank_name" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Passbook Attachment</label>
+                        <div id="bankPassbookDocCurrent" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded flex items-center justify-between">
+                            <a id="bankPassbookDocViewLink" href="#" target="_blank" class="text-blue-600 hover:underline">
+                                <i class="fas fa-file-pdf mr-1"></i>View Current Document
+                            </a>
+                            <span class="text-sm text-gray-600">Replace with new file below</span>
+                        </div>
+                        <input type="file" name="bank_passbook_attachment" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reporting Person -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-user-tie text-blue-600 mr-3"></i>
+                    Reporting Person
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name of the Person</label>
+                        <input type="text" name="reporting_person_name" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <input type="text" name="reporting_person_role" placeholder="e.g., Manager, Team Lead" class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms & Conditions -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <div class="flex items-start space-x-3">
+                    <input type="checkbox" id="termsCheckbox" name="terms_acceptance" required class="mt-1 w-4 h-4 border-gray-300 rounded">
+                    <label for="termsCheckbox" class="text-sm text-gray-700">
+                        <span class="font-medium">Declaration:</span> I hereby confirm that all the above details provided by me are correct and accurate to the best of my knowledge.
+                    </label>
+                </div>
+            </div>
+
+            <!-- Digital Signature -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-signature text-blue-600 mr-3"></i>
+                    Digital Signature
+                </h2>
+                <div class="mb-4">
+                    <canvas id="signatureCanvas" width="400" height="200" class="border border-gray-300 rounded w-full max-w-md"></canvas>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" id="clearSignature" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Clear Signature</button>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Sign above using mouse, touch, or stylus</p>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="bg-white rounded-lg shadow-lg p-6 form-section">
+                <div class="flex justify-end space-x-4">
+                    <button type="button" onclick="window.history.back()" class="px-6 py-3 border rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" id="submitBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-save mr-2"></i>Save Employee
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Helper function to toggle children names field
+        function toggleChildrenNames(value) {
+            const container = document.getElementById('childrenNamesContainer');
+            if (parseInt(value) > 0) {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        // Copy temporary address to permanent address
+        function copyTempToPerm() {
+            const tempAddress = document.getElementById('tempAddress').value;
+            document.getElementById('permAddress').value = tempAddress;
+        }
+    </script>
+    <script src="/js/add-employee.js"></script>
+</body>
+</html>

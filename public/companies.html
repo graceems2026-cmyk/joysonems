@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Companies - EMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 shadow-lg">
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold">Companies Management</h1>
+                <p class="text-blue-100 text-xs md:text-sm hidden md:block">Manage all companies in the system</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="relative">
+                    <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition flex items-center text-sm">
+                        <i class="fas fa-file-export md:mr-2"></i><span class="hidden md:inline">Export</span>
+                        <i class="fas fa-chevron-down ml-1"></i>
+                    </button>
+                    <div id="exportMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border">
+                        <button onclick="exportCompanies('excel')" class="w-full text-left text-black px-4 py-2 hover:bg-gray-100 flex items-center text-sm">
+                            <i class="fas fa-file-excel text-green-600 mr-2"></i> Excel
+                        </button>
+                        <button onclick="exportCompanies('pdf')" class="w-full text-left text-black px-4 py-2 hover:bg-gray-100 flex items-center text-sm">
+                            <i class="fas fa-file-pdf text-red-600 mr-2"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-lg transition text-sm">
+                    <i class="fas fa-arrow-left md:mr-2"></i><span class="hidden md:inline">Back</span>
+                </button>
+                <button onclick="openAddCompanyModal()" class="bg-white text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg font-semibold transition text-sm">
+                    <i class="fas fa-plus md:mr-2"></i><span class="hidden md:inline">Add Company</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Companies Grid -->
+    <div class="max-w-7xl mx-auto p-6">
+        <div id="companiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading -->
+            <div class="col-span-3 text-center py-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Company Modal -->
+    <div id="companyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+                <h2 id="modalTitle" class="text-2xl font-bold">Add New Company</h2>
+            </div>
+            
+            <form id="companyForm" class="p-6">
+                <!-- Company Logo -->
+                <div class="mb-6 text-center">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Company Logo</label>
+                    <div class="relative inline-block">
+                        <div id="logoPreviewContainer" class="w-32 h-32 rounded-lg border-2 border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                            <i id="defaultLogoIcon" class="fas fa-building text-5xl text-gray-400"></i>
+                            <img id="logoPreview" src="" alt="Logo" class="hidden w-full h-full object-cover">
+                        </div>
+                        <label for="logoInput" class="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700">
+                            <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="logoInput" name="logo" accept="image/*" class="hidden" onchange="previewLogo(event)">
+                    </div>
+                </div>
+
+                <!-- Company Details -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Company Name *</label>
+                        <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Company Code *</label>
+                        <input type="text" name="code" required maxlength="10" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">GST Number</label>
+                        <input type="text" name="gst_number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                        <textarea name="address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+                        <input type="tel" name="phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                        <input type="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Website</label>
+                        <input type="url" name="website" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Status *</label>
+                        <select name="is_active" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeCompanyModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-save mr-2"></i>Save Company
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/companies.js"></script>
+</body>
+</html>
