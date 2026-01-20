@@ -159,11 +159,11 @@
                 </div>
             </div>
 
-            <!-- Medical & Identity Information -->
+            <!-- Identity Information -->
             <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                     <i class="fas fa-id-card text-blue-600 mr-3"></i>
-                    Medical & Identity Information
+                    Identity Information
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -194,7 +194,17 @@
                         </div>
                         <input type="file" name="driving_license_attachment" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded px-3 py-2">
                     </div>
-                    <div class="md:col-span-2">
+                </div>
+            </div>
+
+            <!-- Medical Information -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-heartbeat text-red-600 mr-3"></i>
+                    Medical Information
+                </h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Medical Details (if applicable)</label>
                         <textarea name="medical_details" rows="3" placeholder="Enter any medical conditions, allergies, or special requirements" class="w-full border rounded px-3 py-2"></textarea>
                     </div>
@@ -406,7 +416,13 @@
                 <div class="flex items-start space-x-3">
                     <input type="checkbox" id="termsCheckbox" name="terms_acceptance" required class="mt-1 w-4 h-4 border-gray-300 rounded">
                     <label for="termsCheckbox" class="text-sm text-gray-700">
-                        <span class="font-medium">Declaration:</span> I hereby confirm that all the above details provided by me are correct and accurate to the best of my knowledge.
+                        <span class="font-medium">Declaration:</span> I hereby confirm that all the above details provided by me are correct and accurate to the best of my knowledge and I accept all the Terms & Conditions of the Management.
+                    </label>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <input type="checkbox" id="termsCheckbox" name="terms_acceptance" required class="mt-1 w-4 h-4 border-gray-300 rounded">
+                    <label for="termsCheckbox" class="text-sm text-gray-700">
+                        I accept all the Terms & Conditions of the Management.
                     </label>
                 </div>
             </div>
