@@ -17,17 +17,22 @@ router.get('/stats', authenticateToken, async (req, res) => {
 
         // For Super Admin - all companies stats
         if (req.user.role === 'SUPER_ADMIN') {
+            // Calculate 30 days ago
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+            
             // SQLite-compatible stats
             const [stats] = await pool.query(`
                 SELECT 
                     (SELECT COUNT(*) FROM companies WHERE is_active = 1) as total_companies,
                     (SELECT COUNT(*) FROM employees WHERE status = 'Active') as total_employees,
                     (SELECT COALESCE(SUM(gross_salary), 0) FROM employees WHERE status = 'Active') as total_salary,
-                    (SELECT COUNT(*) FROM employees WHERE strftime('%m', date_of_joining) = strftime('%m','now') AND strftime('%Y', date_of_joining) = strftime('%Y','now')) as new_joinings_this_month,
+                    (SELECT COUNT(*) FROM employees WHERE date_of_joining >= ?) as new_joinings_this_month,
                     (SELECT COUNT(*) FROM employees WHERE status = 'On Leave') as employees_on_leave,
                     (SELECT COUNT(*) FROM employee_documents WHERE is_verified = 0) as pending_verifications,
-                    (SELECT COUNT(DISTINCT company_id) FROM employees WHERE strftime('%m', date_of_joining) = strftime('%m','now') AND strftime('%Y', date_of_joining) = strftime('%Y','now')) as companies_with_new_joinings
-            `);
+                    (SELECT COUNT(DISTINCT company_id) FROM employees WHERE date_of_joining >= ?) as companies_with_new_joinings
+            `, [thirtyDaysAgoStr, thirtyDaysAgoStr]);
 
             // Get company-wise employee distribution
             const [companyDistribution] = await pool.query(`
@@ -70,20 +75,23 @@ router.get('/stats', authenticateToken, async (req, res) => {
             });
         } else {
             // For Company Admin - their company stats
+            // Calculate 30 days ago
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+            
             const [stats] = await pool.query(`
                 SELECT 
                     (SELECT name FROM companies WHERE id = ?) as company_name,
                     (SELECT COUNT(*) FROM employees WHERE company_id = ? AND status = 'Active') as total_employees,
                     (SELECT COALESCE(SUM(gross_salary), 0) FROM employees WHERE company_id = ? AND status = 'Active') as total_salary,
-                    (SELECT COUNT(*) FROM employees WHERE company_id = ? 
-                        AND strftime('%m', date_of_joining) = strftime('%m','now') 
-                        AND strftime('%Y', date_of_joining) = strftime('%Y','now')) as new_joinings_this_month,
+                    (SELECT COUNT(*) FROM employees WHERE company_id = ? AND date_of_joining >= ?) as new_joinings_this_month,
                     (SELECT COUNT(*) FROM employees WHERE company_id = ? AND status = 'On Leave') as employees_on_leave,
                     (SELECT COUNT(*) FROM employee_documents ed
                         JOIN employees e ON ed.employee_id = e.id
                         WHERE e.company_id = ? AND ed.is_verified = 0) as pending_verifications,
                     (SELECT COUNT(*) FROM employees WHERE company_id = ? AND status = 'Inactive') as inactive_employees
-            `, [params[0], params[0], params[0], params[0], params[0], params[0], params[0]]);
+            `, [params[0], params[0], params[0], params[0], thirtyDaysAgoStr, params[0], params[0], params[0]]);
 
             // Department distribution for this company
             const [departmentDistribution] = await pool.query(`

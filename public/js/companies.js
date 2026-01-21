@@ -99,6 +99,7 @@ function renderCompanies(companies) {
                 ${company.email ? `<div><i class="fas fa-envelope w-5"></i> ${company.email}</div>` : ''}
                 ${company.phone ? `<div><i class="fas fa-phone w-5"></i> ${company.phone}</div>` : ''}
                 ${company.address ? `<div><i class="fas fa-map-marker-alt w-5"></i> ${company.address}</div>` : ''}
+                ${company.about ? `<div class="mt-3 p-3 bg-blue-50 rounded text-gray-700"><i class="fas fa-info-circle text-blue-600 mr-2"></i><strong>About:</strong> ${company.about}</div>` : ''}
             </div>
             
             <div class="flex items-center justify-between pt-4 border-t">

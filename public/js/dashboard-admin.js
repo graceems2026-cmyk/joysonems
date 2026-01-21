@@ -138,6 +138,8 @@ async function loadLeaveRecords() {
     let rows = leaves.map(rec => `
       <tr>
         <td>${rec.first_name} ${rec.last_name || ''}</td>
+        <td>${rec.employee_id || '-'}</td>
+        <td>${rec.department || '-'}</td>
         <td>${rec.type}</td>
         <td>${rec.from_date}</td>
         <td>${rec.to_date}</td>
@@ -147,13 +149,79 @@ async function loadLeaveRecords() {
             ${rec.status || 'Pending'}
           </span>
         </td>
+        <td>
+          <button onclick="window.location.href='/employee-details.html?id=${rec.employee_id}'" class="text-blue-600 hover:text-blue-800 text-xs font-semibold flex items-center gap-1">
+            <i class="fas fa-eye"></i>View
+          </button>
+        </td>
       </tr>
     `).join('');
     
-    tableBody.innerHTML = rows.length ? rows : '<tr><td colspan="6" class="text-center text-gray-400 py-2">No leave records found.</td></tr>';
+    tableBody.innerHTML = rows.length ? rows : '<tr><td colspan="9" class="text-center text-gray-400 py-2">No leave records found.</td></tr>';
   } catch (err) {
     console.error('Error loading leave records:', err);
-    tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-red-400 py-2">Error: ${err.message}</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-red-400 py-2">Error: ${err.message}</td></tr>`;
+  }
+}
+
+// Load new joinings from last 30 days
+async function loadNewJoinings() {
+  const newJoiningsList = document.getElementById('newJoiningsList');
+  if (!newJoiningsList) return;
+
+  try {
+    const res = await fetch('/api/employees/all/new-joinings', { credentials: 'include' });
+    if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to fetch new joinings');
+    }
+    const employees = await res.json();
+    
+    if (!Array.isArray(employees)) {
+        throw new Error("Unexpected response format from server.");
+    }
+    
+    if (employees.length === 0) {
+        newJoiningsList.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">No new joinings in the last 30 days</div>';
+        return;
+    }
+    
+    const tableHtml = `
+      <div class="table-scroll-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Join Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${employees.map(emp => `
+              <tr>
+                <td>${emp.first_name} ${emp.last_name || ''}</td>
+                <td><span class="badge badge-blue">${emp.employee_id}</span></td>
+                <td>${emp.department || '-'}</td>
+                <td>${emp.designation || '-'}</td>
+                <td>${emp.date_of_joining || '-'}</td>
+                <td>
+                  <button onclick="window.location.href='/employee-details.html?id=${emp.id}'" class="text-blue-600 hover:text-blue-800 text-xs font-semibold flex items-center gap-1">
+                    <i class="fas fa-eye"></i>View
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    newJoiningsList.innerHTML = tableHtml;
+  } catch (err) {
+    console.error('Error loading new joinings:', err);
+    newJoiningsList.innerHTML = `<div class='text-center text-red-500 py-4'>Error: ${err.message}</div>`;
   }
 }
 
@@ -199,76 +267,63 @@ async function loadDashboard() {
     if (!res.ok) throw new Error(data.error || 'Failed to load dashboard');
     
     contentArea.innerHTML = `
-      <!-- Stats Cards -->
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
-        <div class="stat-card bg-white rounded-lg shadow p-3 border-l-4 border-blue-600">
-          <p class="text-gray-500 text-xs">Company</p>
-          <p class="text-sm font-bold text-blue-700 truncate">${data.company_name || 'N/A'}</p>
-        </div>
-        <div class="stat-card bg-white rounded-lg shadow p-3 border-l-4 border-green-600">
-          <p class="text-gray-500 text-xs">Employees</p>
-          <p class="text-xl font-bold text-green-700">${data.total_employees || 0}</p>
-        </div>
-        <div class="stat-card bg-white rounded-lg shadow p-3 border-l-4 border-yellow-600">
-          <p class="text-gray-500 text-xs">Total Salary</p>
-          <p class="text-sm font-bold text-yellow-700">₹${(data.total_salary || 0).toLocaleString('en-IN')}</p>
-        </div>
-        <div class="stat-card bg-white rounded-lg shadow p-3 border-l-4 border-purple-600">
-          <p class="text-gray-500 text-xs">New Joins</p>
-          <p class="text-xl font-bold text-purple-700">${data.new_joinings_this_month || 0}</p>
-        </div>
-      </div>
-      
-      <!-- Charts -->
-      <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1rem;">
-        <div class="chart-card">
-          <h3 class="text-xs font-semibold text-blue-800 mb-2"><i class="fas fa-chart-pie mr-1"></i>Departments</h3>
-          <div class="chart-container">
-            <canvas id="departmentChart"></canvas>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 mb-4">
+        <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-blue-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Company</p>
+              <p class="text-2xl font-bold text-blue-700 truncate">${data.company_name || 'N/A'}</p>
+            </div>
+            <i class="fas fa-building text-3xl text-blue-200"></i>
           </div>
         </div>
-        <div class="chart-card">
-          <h3 class="text-xs font-semibold text-blue-800 mb-2"><i class="fas fa-chart-bar mr-1"></i>Designations</h3>
-          <div class="chart-container">
-            <canvas id="designationChart"></canvas>
+        <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-green-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Employees</p>
+              <p class="text-2xl font-bold text-green-700">${data.total_employees || 0}</p>
+            </div>
+            <i class="fas fa-users text-3xl text-green-200"></i>
+          </div>
+        </div>
+        <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-yellow-600" style="display: none;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Total Salary</p>
+              <p class="text-lg font-bold text-yellow-700">₹${(data.total_salary || 0).toLocaleString('en-IN')}</p>
+            </div>
+            <i class="fas fa-money-bill text-3xl text-yellow-200"></i>
+          </div>
+        </div>
+        <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-purple-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">New Joinings</p>
+              <p class="text-2xl font-bold text-purple-700">${data.new_joinings_this_month || 0}</p>
+            </div>
+            <i class="fas fa-user-plus text-3xl text-purple-200"></i>
           </div>
         </div>
       </div>
-      
-      <!-- Department Table -->
-      <div class="table-card mb-3">
-        <div class="p-2 border-b">
-          <h3 class="text-xs font-semibold text-blue-800"><i class="fas fa-list mr-1"></i>Departments</h3>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white rounded-lg shadow p-4">
+          <h3 class="text-base font-semibold text-blue-800 mb-3"><i class="fas fa-chart-pie mr-2"></i>Department Distribution</h3>
+          <canvas id="departmentChart" style="max-height: 250px;"></canvas>
         </div>
-        <div class="table-scroll-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Department</th>
-                <th>Count</th>
-                <th>Salary</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(data.department_distribution || []).map(d => `
-                <tr>
-                  <td>${d.department}</td>
-                  <td><span class="badge badge-blue">${d.count}</span></td>
-                  <td>₹${(d.total_salary || 0).toLocaleString('en-IN')}</td>
-                </tr>
-              `).join('') || '<tr><td colspan="3" class="text-center text-gray-400 py-2">No data</td></tr>'}
-            </tbody>
-          </table>
+        <div class="bg-white rounded-lg shadow p-4">
+          <h3 class="text-base font-semibold text-blue-800 mb-3"><i class="fas fa-chart-bar mr-2"></i>Designation Distribution</h3>
+          <canvas id="designationChart" style="max-height: 250px;"></canvas>
         </div>
       </div>
-      
-      <!-- Recent Employees -->
-      <div class="table-card">
-        <div class="p-2 border-b">
-          <h3 class="text-xs font-semibold text-blue-800"><i class="fas fa-users mr-1"></i>Recent Employees</h3>
+
+      <!-- New Joinings (Last 30 Days) -->
+      <div class="mt-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-blue-800 text-base font-semibold">New Joinings (Last 30 Days)</h3>
         </div>
-        <div id="recentEmployeesTable">
-          <div class="p-3 text-center text-gray-500 text-sm">Loading...</div>
+        <div id="newJoiningsList" class="table-card">
+          <div class="p-4 text-center text-gray-500 text-sm">Loading...</div>
         </div>
       </div>
     `;
@@ -277,13 +332,14 @@ async function loadDashboard() {
     createDepartmentChart(data.department_distribution || []);
     createDesignationChart(data.designation_distribution || []);
     
-    // Load recent employees with photos
-    loadRecentEmployees();
+    // Load new joinings
+    loadNewJoinings();
   } catch (err) {
     contentArea.innerHTML = `<div class='bg-red-50 border border-red-200 rounded p-4 text-red-700'><i class="fas fa-exclamation-triangle mr-2"></i>${err.message}</div>`;
   }
 }
 
+// Chart functions for dashboard
 function createDepartmentChart(departments) {
   const ctx = document.getElementById('departmentChart');
   if (!ctx) return;
@@ -295,29 +351,23 @@ function createDepartmentChart(departments) {
       datasets: [{
         data: departments.map(d => d.count),
         backgroundColor: [
-          '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
+          '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
         ],
-        borderWidth: 1,
+        borderWidth: 2,
         borderColor: '#fff'
       }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
-      cutout: '40%',
+      maintainAspectRatio: true,
       plugins: {
         legend: {
-          position: 'right',
-          labels: { 
-            boxWidth: 8, 
-            font: { size: 9 }, 
-            padding: 4,
-            usePointStyle: true
-          }
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 11 } }
+        },
+        title: {
+          display: false
         }
-      },
-      layout: {
-        padding: 0
       }
     }
   });
@@ -327,97 +377,39 @@ function createDesignationChart(designations) {
   const ctx = document.getElementById('designationChart');
   if (!ctx) return;
   
-  // Truncate long labels
-  const truncatedLabels = designations.map(d => 
-    d.designation.length > 10 ? d.designation.substring(0, 10) + '..' : d.designation
-  );
-  
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: truncatedLabels,
+      labels: designations.map(d => d.designation),
       datasets: [{
         label: 'Employees',
         data: designations.map(d => d.count),
         backgroundColor: '#3b82f6',
         borderColor: '#1e40af',
-        borderWidth: 1,
-        barThickness: 20,
-        maxBarThickness: 30
+        borderWidth: 1
       }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'y',
+      maintainAspectRatio: true,
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        title: { display: false }
       },
       scales: {
-        x: {
-          beginAtZero: true,
-          ticks: { font: { size: 9 }, stepSize: 1 },
-          grid: { display: false }
-        },
         y: {
-          ticks: { font: { size: 9 } },
-          grid: { display: false }
+          beginAtZero: true,
+          ticks: { font: { size: 10 } }
+        },
+        x: {
+          ticks: { font: { size: 10 } }
         }
-      },
-      layout: {
-        padding: 0
       }
     }
   });
 }
+// loadRecentEmployees function removed - using simplified dashboard layout like superadmin
 
-async function loadRecentEmployees() {
-  try {
-    const res = await fetch('/api/employees?limit=5', {
-      credentials: 'include'
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to load employees');
-    
-    const employees = data.data || data.employees || [];
-    const tableHtml = `
-      <div class="table-scroll-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Dept</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${employees.map(e => `
-              <tr>
-                <td><span class="badge badge-blue">${e.employee_id}</span></td>
-                <td>${e.first_name} ${e.last_name || ''}</td>
-                <td>${e.department || '-'}</td>
-                <td>
-                  <span class="status-badge ${
-                    e.status === 'Active' ? 'status-active' : 
-                    e.status === 'On Leave' ? 'status-leave' : 
-                    'status-inactive'
-                  }">${e.status || 'Active'}</span>
-                </td>
-              </tr>
-            `).join('') || '<tr><td colspan="4" class="text-center text-gray-400 py-2">No employees</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    `;
-    
-    document.getElementById('recentEmployeesTable').innerHTML = tableHtml;
-  } catch (err) {
-    document.getElementById('recentEmployeesTable').innerHTML = `
-      <div class='text-red-600 text-sm'><i class="fas fa-exclamation-triangle mr-2"></i>${err.message}</div>
-    `;
-  }
-}
 
 async function loadEmployees() {
   const contentArea = document.getElementById('contentArea');

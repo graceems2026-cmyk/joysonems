@@ -170,6 +170,8 @@ async function loadLeaveRecords() {
       <tr>
         <td>${rec.company_name}</td>
         <td>${rec.first_name} ${rec.last_name || ''}</td>
+        <td>${rec.employee_id || '-'}</td>
+        <td>${rec.department || '-'}</td>
         <td>${rec.type}</td>
         <td>${rec.from_date}</td>
         <td>${rec.to_date}</td>
@@ -179,13 +181,81 @@ async function loadLeaveRecords() {
             ${rec.status || 'Pending'}
           </span>
         </td>
+        <td>
+          <button onclick="window.location.href='/employee-details.html?id=${rec.employee_id}'" class="text-blue-600 hover:text-blue-800 text-xs font-semibold flex items-center gap-1">
+            <i class="fas fa-eye"></i>View
+          </button>
+        </td>
       </tr>
     `).join('');
     
-    tableBody.innerHTML = rows.length ? rows : '<tr><td colspan="7" class="text-center text-gray-400 py-2">No leave records found.</td></tr>';
+    tableBody.innerHTML = rows.length ? rows : '<tr><td colspan="10" class="text-center text-gray-400 py-2">No leave records found.</td></tr>';
   } catch (err) {
     console.error('Error loading leave records:', err);
-    tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-red-400 py-2">Error: ${err.message}</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-red-400 py-2">Error: ${err.message}</td></tr>`;
+  }
+}
+
+// Load new joinings from last 30 days
+async function loadNewJoinings() {
+  const newJoiningsList = document.getElementById('newJoiningsList');
+  if (!newJoiningsList) return;
+
+  try {
+    const res = await fetch('/api/employees/all/new-joinings', { credentials: 'include' });
+    if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to fetch new joinings');
+    }
+    const employees = await res.json();
+    
+    if (!Array.isArray(employees)) {
+        throw new Error("Unexpected response format from server.");
+    }
+    
+    if (employees.length === 0) {
+        newJoiningsList.innerHTML = '<div class="text-center text-gray-500 py-4">No new joinings in the last 30 days</div>';
+        return;
+    }
+    
+    const tableHtml = `
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-blue-50">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">Name</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">ID</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">Company</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">Department</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">Designation</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">Join Date</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-blue-800">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${employees.map(emp => `
+              <tr class="border-b hover:bg-blue-50">
+                <td class="px-3 py-2">${emp.first_name} ${emp.last_name || ''}</td>
+                <td class="px-3 py-2"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">${emp.employee_id}</span></td>
+                <td class="px-3 py-2">${emp.company_name || '-'}</td>
+                <td class="px-3 py-2">${emp.department || '-'}</td>
+                <td class="px-3 py-2">${emp.designation || '-'}</td>
+                <td class="px-3 py-2">${emp.date_of_joining || '-'}</td>
+                <td class="px-3 py-2">
+                  <button onclick="window.location.href='/employee-details.html?id=${emp.id}'" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    newJoiningsList.innerHTML = tableHtml;
+  } catch (err) {
+    console.error('Error loading new joinings:', err);
+    newJoiningsList.innerHTML = `<div class='text-center text-red-500 py-4'>Error: ${err.message}</div>`;
   }
 }
 
@@ -240,7 +310,7 @@ async function loadDashboard() {
     if (!res.ok) throw new Error(data.error || 'Failed to load dashboard');
     
     contentArea.innerHTML = `
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
         <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-blue-600">
           <div class="flex items-center justify-between">
             <div>
@@ -259,7 +329,7 @@ async function loadDashboard() {
             <i class="fas fa-users text-3xl text-green-200"></i>
           </div>
         </div>
-        <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-yellow-600">
+        <div class="stat-card bg-white rounded-lg shadow p-4 border-l-4 border-yellow-600" style="display: none;">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-gray-500 text-xs">Total Salary</p>
@@ -287,6 +357,13 @@ async function loadDashboard() {
         <div class="bg-white rounded-lg shadow p-4">
           <h3 class="text-base font-semibold text-blue-800 mb-3"><i class="fas fa-chart-bar mr-2"></i>Department Distribution</h3>
           <canvas id="departmentChart" style="max-height: 250px;"></canvas>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow p-4 mb-4 lg:col-span-2">
+        <h3 class="text-base font-semibold text-blue-800 mb-3"><i class="fas fa-user-plus mr-2"></i>New Joinings (Last 30 Days)</h3>
+        <div id="newJoiningsList">
+          <div class="text-center text-gray-500 py-4">Loading...</div>
         </div>
       </div>
       
@@ -320,6 +397,9 @@ async function loadDashboard() {
     // Create charts
     createCompanyChart(data.company_distribution || []);
     createDepartmentChart(data.department_distribution || []);
+    
+    // Load new joinings
+    loadNewJoinings();
   } catch (err) {
     contentArea.innerHTML = `<div class='bg-red-50 border border-red-200 rounded p-4 text-red-700'><i class="fas fa-exclamation-triangle mr-2"></i>${err.message}</div>`;
   }

@@ -69,7 +69,7 @@ async function renderDocumentsTable() {
             </td>
             <td class="px-4 py-2">
                 <div class="font-bold">${emp.first_name} ${emp.last_name || ''}</div>
-                <div class="text-xs text-gray-500">${emp.employee_id || ''}</div>
+                <div class="text-xs text-gray-500">${emp.mobile || ''}</div>
             </td>
             <td class="px-4 py-2">${emp.department || ''}</td>
             <td class="px-4 py-2">${aadhaar ? `<span class='bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold cursor-pointer' onclick='window.open("/${aadhaar.file_path}","_blank")'><i class="fas fa-id-card"></i> View</span>` : `<span class='bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-semibold'><i class="fas fa-times"></i> Missing</span>`}</td>

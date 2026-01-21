@@ -128,10 +128,10 @@ router.post('/', authenticateToken, authorize('SUPER_ADMIN'),
 
         const [result] = await pool.query(
             `INSERT INTO companies (name, code, address, city, state, pincode, country,
-                gst_number, pan_number, phone, email, website, established_date, logo_path)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                gst_number, pan_number, phone, email, website, established_date, logo_path, about)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [name, code.toUpperCase(), address, city, state, pincode, country || 'India',
-             gst_number, pan_number, phone, email, website, established_date, logoPath]
+             gst_number, pan_number, phone, email, website, established_date, logoPath, req.body.about || null]
         );
 
         // Create employee sequence for this company
@@ -199,6 +199,7 @@ router.put('/:id', authenticateToken, paramValidation.id,
         if (email !== undefined) { updates.push('email = ?'); params.push(email); }
         if (website !== undefined) { updates.push('website = ?'); params.push(website); }
         if (established_date !== undefined) { updates.push('established_date = ?'); params.push(established_date); }
+        if (req.body.about !== undefined) { updates.push('about = ?'); params.push(req.body.about || null); }
         if (is_active !== undefined && req.user.role === 'SUPER_ADMIN') { 
             updates.push('is_active = ?'); 
             params.push(is_active); 

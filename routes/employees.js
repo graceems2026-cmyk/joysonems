@@ -226,6 +226,8 @@ router.get('/all/leaves', authenticateToken, async (req, res) => {
                 e.id as employee_id,
                 e.first_name,
                 e.last_name,
+                e.employee_id,
+                e.department,
                 e.leave_records,
                 c.id as company_id,
                 c.name as company_name
@@ -279,6 +281,46 @@ router.get('/all/leaves', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Get all leave records error:', error);
         res.status(500).json({ error: 'Failed to fetch leave records' });
+    }
+});
+
+// Get new joinings from last 30 days
+router.get('/all/new-joinings', authenticateToken, async (req, res) => {
+    try {
+        console.log('=== GET /api/employees/all/new-joinings called ===');
+        console.log('User:', req.user.id, 'Role:', req.user.role, 'Company:', req.user.company_id);
+        
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+        
+        let query = `
+            SELECT e.id, e.first_name, e.last_name, e.employee_id, e.department, 
+                   e.designation, e.date_of_joining, c.name as company_name
+            FROM employees e
+            LEFT JOIN companies c ON e.company_id = c.id
+            WHERE e.date_of_joining >= ?
+        `;
+        let params = [thirtyDaysAgoStr];
+        
+        // If user is admin/hr of a company, show only their company
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.company_id) {
+            query += ' AND e.company_id = ?';
+            params.push(req.user.company_id);
+        }
+        
+        query += ' ORDER BY e.date_of_joining DESC';
+        
+        console.log('Query:', query);
+        console.log('Params:', params);
+        
+        const [employees] = await pool.query(query, params);
+        
+        console.log('Found employees:', employees?.length || 0);
+        res.json(employees || []);
+    } catch (error) {
+        console.error('Get new joinings error:', error);
+        res.status(500).json({ error: 'Failed to fetch new joinings', details: error.message });
     }
 });
 
@@ -1112,6 +1154,5 @@ router.delete('/:id', authenticateToken, authorize('SUPER_ADMIN', 'COMPANY_ADMIN
         res.status(500).json({ error: 'Failed to delete employee' });
     }
 });
-
 
 module.exports = router;
